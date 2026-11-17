@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>{{ project.name }} — 网络安全评估报告</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif;
+  font-size: 10pt; line-height: 1.7; color: #1f2733; margin: 0; background: #fff;
+}
+.wrap { max-width: 190mm; margin: 0 auto; padding: 10mm 0 20mm; }
+h1, h2, h3, h4 { margin: 0; font-weight: 600; }
+/* ── 打印工具条（打印时隐藏）── */
+.toolbar {
+  position: sticky; top: 0; z-index: 10; display: flex; gap: 8px;
+  padding: 8px 0; background: #fff; border-bottom: 1px solid #e2e8f0; margin-bottom: 8mm;
+}
+.toolbar button {
+  font: inherit; font-size: 9pt; padding: 5px 14px; cursor: pointer;
+  border: 1px solid #1f4e79; background: #1f4e79; color: #fff; border-radius: 3px;
+}
+.toolbar button.ghost { background: #fff; color: #1f4e79; }
+/* ── 封面 ── */
+.cover { padding: 30mm 0 0; text-align: center; }
+.cover .kicker { letter-spacing: .3em; font-size: 9pt; color: #64748b; }
+.cover h1 { font-size: 26pt; color: #1f4e79; margin: 12mm 0 6mm; letter-spacing: .06em; }
+.cover .sub { font-size: 12pt; color: #334155; }
+.cover table { width: 120mm; margin: 30mm auto 0; }
+.cover td { border: none; padding: 2mm 3mm; font-size: 10pt; }
+.cover td:first-child { color: #64748b; width: 34mm; text-align: right; }
+.cover td:last-child { text-align: left; font-weight: 600; }
+.conf { margin: 24mm auto 0; width: 120mm; font-size: 9pt; color: #b42318;
+        border: 1px solid #f0c4bf; background: #fdf4f3; padding: 3mm 4mm; text-align: left; }
+/* ── 章节标题 ── */
+.report_h { font-size: 14pt; color: #1f4e79; margin: 10mm 0 4mm;
+            padding-bottom: 1.5mm; border-bottom: 2px solid #1f4e79; }
+.report_h2 { font-size: 12pt; color: #24486b; margin: 7mm 0 3mm;
+             padding-left: 2mm; border-left: 4px solid #1f4e79; }
+.report_h3 { font-size: 10.5pt; color: #334155; margin: 5mm 0 2mm; }
+/* ── 表格 ── */
+table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9pt; }
+th, td { border: 1px solid #cfd8e3; padding: 4px 6px; vertical-align: top; text-align: left; }
+th { background: #eef2f7; color: #1f4e79; font-weight: 600; white-space: nowrap; }
+tbody tr:nth-child(odd) { background: #fafbfc; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+/* ── 严重度配色 ── */
+.sev-critical { color: #b42318; font-weight: 700; }
+.sev-high { color: #d97706; font-weight: 700; }
+.sev-medium { color: #b45309; font-weight: 600; }
+.sev-low { color: #475467; }
+.sev-info { color: #667085; }
+/* ── 风险详情（可展开）── */
+details { margin: 2mm 0; border: 1px solid #e2e8f0; border-radius: 3px; }
+summary { padding: 2.5mm 3mm; cursor: pointer; background: #f8fafc; font-weight: 600; }
+summary .meta { float: right; font-weight: 400; color: #64748b; font-size: 8.5pt; }
+details[open] summary { border-bottom: 1px solid #e2e8f0; }
+.detail { margin: 0; border: none; }
+.detail th { width: 26mm; background: #f1f5f9; }
+/* ── KPI / 分布 ── */
+.kpis { display: flex; gap: 4mm; margin: 3mm 0 4mm; }
+.kpi { flex: 1; border: 1px solid #e2e8f0; border-top: 3px solid #1f4e79; padding: 2.5mm 3mm; }
+.kpi b { display: block; font-size: 15pt; color: #1f4e79; line-height: 1.2; }
+.kpi span { font-size: 8.5pt; color: #64748b; }
+.bar { display: flex; height: 6mm; margin: 2mm 0 3mm; border: 1px solid #e2e8f0; }
+.bar i { display: block; height: 100%; }
+.note { font-size: 8.5pt; color: #64748b; margin: 1mm 0 3mm; }
+.toc { margin: 6mm 0; font-size: 10pt; }
+.toc a { color: #1f4e79; text-decoration: none; }
+.toc-list, .toc-list ul { list-style: none; padding-left: 0; margin: 0; }
+.toc-list ul { padding-left: 9mm; }
+.toc-list li { margin: 1.4mm 0; }
+.toc-list > li > a { font-weight: 600; }
+@media print {
+  .toolbar { display: none; }
+  .wrap { max-width: none; padding: 0; }
+  details { page-break-inside: avoid; }
+  tr { page-break-inside: avoid; }
+  .report_h { page-break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="toolbar">
+    <button onclick="window.print()">打印 / 导出 PDF</button>
+    <button class="ghost" onclick="toggleAll(true)">展开全部</button>
+    <button class="ghost" onclick="toggleAll(false)">收起全部</button>
+  </div>
+
+  <!-- 封面 -->
+  <div class="cover">
+    <div class="kicker">工 控 网 络 安 全 评 估</div>
+    <h1>网络安全评估报告</h1>
+    <div class="sub">{{ project.name }}</div>
+    <table>
+      <tr><td>报告编号</td><td>CS-{{ project.id }}-{{ generated_at.strftime('%Y%m%d') }}</td></tr>
+      <tr><td>任务名称</td><td>{{ project.name }}</td></tr>
+      <tr><td>数据来源</td><td>被动流量分析（PCAP / PCAPNG）</td></tr>
+      <tr><td>报告范围</td><td>{{ report_count }} 份抓包分析结果</td></tr>
+      <tr><td>生成日期</td><td>{{ generated_at.strftime('%Y-%m-%d') }}</td></tr>
+      <tr><td>密　　级</td><td>内部</td></tr>
+    </table>
+    <div class="conf">
+      本报告基于被动流量分析，仅对采集窗口内可见的通信与资产进行呈现，
+      不构成对目标网络全部风险的穷尽性结论。报告含目标网络拓扑与安全弱点信息，
+      仅限授权接收方在评估与整改范围内使用，不得转载或外传。
+    </div>
+  </div>
+
+  <!-- 目录 -->
+  <!-- 执行摘要 -->
+  <div class="report_h" id="summary" style="page-break-before: always;">执行摘要</div>
+  <p style="font-size:10pt;line-height:1.8;">
+    本次评估基于 {{ report_count }} 份抓包分析结果，覆盖 {{ '{:,}'.format(total_packets) }} 个数据包、
+    {{ (total_duration // 3600)|int }} 小时 {{ ((total_duration % 3600) // 60)|int }} 分钟，
+    共识别 {{ hosts|length }} 台资产、{{ sev_total }} 项风险发现，其中严重 / 高危
+    {{ sev_counts.get('CRITICAL', 0) + sev_counts.get('HIGH', 0) }} 项。
+  </p>
+  <div class="kpis">
+    <div class="kpi"><b>{{ hosts|length }}</b><span>资产</span></div>
+    <div class="kpi"><b>{{ sev_total }}</b><span>风险发现</span></div>
+    <div class="kpi"><b>{{ sev_counts.get('CRITICAL', 0) + sev_counts.get('HIGH', 0) }}</b><span>严重 / 高危</span></div>
+    <div class="kpi"><b>{{ report_count }}</b><span>采集文件</span></div>
+  </div>
+  <div class="report_h3">最优先处理的三项</div>
+  {% if categories %}
+  <table>
+    <tr><th>序号</th><th>问题</th><th>等级</th><th class="num">影响资产</th><th>建议</th></tr>
+    {% for c in categories[:3] %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ c.label }}</td>
+      <td class="sev-{{ c.severity|lower }}">{{ t('severity.' ~ c.severity|lower) }}</td>
+      <td class="num">{{ c.nodes|length }}</td>
+      <td>{{ c.remediation or '结合业务台账确认该通信是否属于已批准的业务行为。' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="note">本次评估未产生风险发现。</p>
+  {% endif %}
+  <p class="note">
+    说明：被动分析仅覆盖采集窗口内可见的通信，"未观察到"不等于"不存在"。
+    详细依据与原始证据见后续章节。
+  </p>
+
+  <div class="report_h" id="toc" style="page-break-before: always;">目录</div>
+  <div class="toc">
+    <ul class="toc-list">
+      <li><a href="#s1">1. 综述信息</a>
+        <ul>
+          <li><a href="#s11">1.1 任务信息</a></li>
+          <li><a href="#s12">1.2 风险分布</a></li>
+          <li><a href="#s13">1.3 资产综述</a></li>
+        </ul>
+      </li>
+      <li><a href="#s2">2. 风险类别</a></li>
+      <li><a href="#s3">3. 主机信息</a></li>
+      <li><a href="#s4">4. 风险信息</a></li>
+      <li><a href="#s5">5. 观察到的安全薄弱项</a></li>
+      <li><a href="#s6">6. 参考标准与安全建议</a></li>
+      <li><a href="#s7">7. 附录</a></li>
+    </ul>
+  </div>
+
+  {# ── 1 综述信息 ── #}
+  <div class="report_h" id="s1">1.综述信息</div>
+
+  <div class="report_h2" id="s11">1.1 任务信息</div>
+  <table>
+    <tr><th style="width:30%">项目</th><th>内容</th></tr>
+    <tr><td>任务名称</td><td>{{ project.name }}</td></tr>
+    <tr><td>报告数量</td><td>{{ report_count }} 份</td></tr>
+    <tr><td>采集时间窗</td><td>
+      {% if aggregate.window and aggregate.window.earliest_capture %}{{ aggregate.window.earliest_capture[:19] }}{% else %}—{% endif %}
+      ~
+      {% if aggregate.window and aggregate.window.latest_capture %}{{ aggregate.window.latest_capture[:19] }}{% else %}—{% endif %}
+    </td></tr>
+    <tr><td>数据包总量</td><td>{{ '{:,}'.format(total_packets) }} 个</td></tr>
+    <tr><td>采集总时长</td><td>{{ (total_duration // 3600)|int }} 小时 {{ ((total_duration % 3600) // 60)|int }} 分</td></tr>
+    <tr><td>分析档位</td><td>
+      {% if aggregate.scan_profiles %}{% for p, n in aggregate.scan_profiles.items() %}{{ p|upper }}{% if not loop.last %}、{% endif %}{% endfor %}{% else %}FULL{% endif %}
+    </td></tr>
+    <tr><td>分析引擎</td><td>CharmShark（被动解析：协议识别 + 拓扑重建 + 风险引擎）</td></tr>
+    <tr><td>报告生成时间</td><td>{{ generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</td></tr>
+  </table>
+
+  <div class="report_h2" id="s12">1.2 风险分布</div>
+  <div class="kpis">
+    <div class="kpi"><b>{{ aggregate.totals.assets }}</b><span>资产总数</span></div>
+    <div class="kpi"><b>{{ aggregate.totals.findings }}</b><span>风险类别（去重）</span></div>
+    <div class="kpi"><b>{{ sev_counts.get('CRITICAL', 0) + sev_counts.get('HIGH', 0) }}</b><span>严重 + 高危</span></div>
+    <div class="kpi"><b>{{ aggregate.totals.protocols }}</b><span>协议条目</span></div>
+  </div>
+
+  <div class="report_h3">1.2.1 主机风险分布</div>
+  {% if hosts %}
+  <table>
+    <tr><th>序号</th><th>主机</th><th>最高风险等级</th><th class="num">风险发现数</th></tr>
+    {% for h in hosts %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ h.key }}</td>
+      <td class="sev-{{ (h.severity or 'info')|lower }}">{{ t('severity.' ~ (h.severity or 'INFO')|lower) if h.severity else '无' }}</td>
+      <td class="num">{{ h.finding_count }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="note">未识别到主机资产。</p>
+  {% endif %}
+
+  <div class="report_h3">1.2.2 详细风险分布</div>
+  <div class="bar">
+    {% set colors = {'CRITICAL': '#b42318', 'HIGH': '#d97706', 'MEDIUM': '#b45309', 'LOW': '#475467', 'INFO': '#94a3b8'} %}
+    {% for sev in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] %}
+      {% set n = sev_counts.get(sev, 0) %}
+      {% if n and sev_total %}
+        <i style="width: {{ (n / sev_total * 100)|round(2) }}%; background: {{ colors[sev] }};" title="{{ t('severity.' ~ sev|lower) }} {{ n }}"></i>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <table>
+    <tr><th>风险等级</th><th class="num">数量</th><th class="num">占比</th></tr>
+    {% for sev in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] %}
+    <tr>
+      <td class="sev-{{ sev|lower }}">{{ t('severity.' ~ sev|lower) }}</td>
+      <td class="num">{{ sev_counts.get(sev, 0) }}</td>
+      <td class="num">{{ ((sev_counts.get(sev, 0) / sev_total * 100)|round(1)) if sev_total else 0 }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="report_h2" id="s14">1.4 评估范围与采集完整性</div>
+  <table>
+    <tr><th style="width:30%">项目</th><th>内容</th></tr>
+    <tr><td>采集起止</td><td>
+      {% if aggregate.window and aggregate.window.earliest_capture %}{{ aggregate.window.earliest_capture[:19] }}{% else %}—{% endif %}
+      ~
+      {% if aggregate.window and aggregate.window.latest_capture %}{{ aggregate.window.latest_capture[:19] }}{% else %}—{% endif %}
+    </td></tr>
+    <tr><td>采集总时长</td><td>{{ (total_duration // 3600)|int }} 小时 {{ ((total_duration % 3600) // 60)|int }} 分钟</td></tr>
+    <tr><td>数据包总量</td><td>{{ '{:,}'.format(total_packets) }} 个</td></tr>
+    <tr><td>采集点</td><td>未在抓包中声明；结论仅覆盖镜像口可见的流量</td></tr>
+    <tr><td>双向可见性</td><td>发现条目按可见性标注；仅观察到单向流量时标注"部分可见"</td></tr>
+    <tr><td>范围限制</td><td>未观察到的资产、协议或通信，不代表其不存在</td></tr>
+  </table>
+
+  <div class="report_h2" id="s13">1.3 资产综述</div>
+  <div class="report_h3">1.3.1 设备类型分布</div>
+  <table>
+    <tr><th>设备类型 / 角色</th><th class="num">数量</th><th class="num">占比</th></tr>
+    {% for label, n in type_counts.items() %}
+    <tr>
+      <td>{{ label }}</td>
+      <td class="num">{{ n }}</td>
+      <td class="num">{{ ((n / hosts|length * 100)|round(1)) if hosts else 0 }}%</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">无资产数据。</td></tr>
+    {% endfor %}
+  </table>
+
+  {# ── 2 风险类别 ── #}
+  <div class="report_h" id="s2">2.风险类别</div>
+  <div class="report_h2">2.1 按风险类别统计</div>
+  <table>
+    <tr><th>序号</th><th>风险类别</th><th>严重度</th><th class="num">影响资产</th><th class="num">出现次数</th></tr>
+    {% for c in categories %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ c.label }}</td>
+      <td class="sev-{{ c.severity|lower }}">{{ t('severity.' ~ c.severity|lower) }}</td>
+      <td class="num">{{ c.nodes|length }}</td>
+      <td class="num">{{ c.occurrences }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">本次评估未产生风险发现。</td></tr>
+    {% endfor %}
+  </table>
+
+  {% if aggregate.attack_coverage %}
+  <div class="report_h2">2.2 ATT&amp;CK 覆盖</div>
+  <table>
+    <tr><th>技术编号</th><th>关联风险类别</th></tr>
+    {% for a in aggregate.attack_coverage %}
+    <tr>
+      <td>{{ a.id }}</td>
+      <td>{{ a.categories|join('、') }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {# ── 3 主机信息 ── #}
+  <div class="report_h" id="s3">3.主机信息</div>
+  <div class="report_h2">3.1 主机风险等级列表</div>
+  <table>
+    <tr><th>序号</th><th>IP</th><th>MAC</th><th>角色</th><th class="num">Purdue</th><th class="num">风险发现数</th><th>最高等级</th></tr>
+    {% for h in hosts %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ h.ips|join(', ') or '—' }}</td>
+      <td>{{ h.macs|join(', ') or '—' }}</td>
+      <td>{{ h.roles|join(', ') or (h.device_types|join(', ') or '未知') }}</td>
+      <td class="num">{% if h.purdue_levels %}{{ h.purdue_levels|join(', ') }}{% else %}—{% endif %}</td>
+      <td class="num">{{ h.finding_count }}</td>
+      <td class="sev-{{ (h.severity or 'info')|lower }}">{{ t('severity.' ~ (h.severity or 'INFO')|lower) if h.severity else '无' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">无主机数据。</td></tr>
+    {% endfor %}
+  </table>
+
+  {# ── 4 风险信息 ── #}
+  <div class="report_h" id="s4">4.风险信息</div>
+  <div class="note">
+    本章为被动流量分析发现的风险项。与主动漏洞扫描不同，本报告不含 CVE、CVSS 等补丁级漏洞字段，
+    所有结论均基于采集窗口内观察到的通信行为，需结合资产台账与业务基线复核后定性。
+  </div>
+  <div class="report_h2">4.1 风险分布</div>
+  <table>
+    <tr><th>序号</th><th>风险名称</th><th>严重度</th><th class="num">影响主机个数</th><th class="num">占比</th><th class="num">出现次数</th></tr>
+    {% for c in categories %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ c.label }}</td>
+      <td class="sev-{{ c.severity|lower }}">{{ t('severity.' ~ c.severity|lower) }}</td>
+      <td class="num">{{ c.nodes|length }}</td>
+      <td class="num">{{ ((c.nodes|length / hosts|length * 100)|round(0)) if hosts else 0 }}%</td>
+      <td class="num">{{ c.occurrences }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">无风险发现。</td></tr>
+    {% endfor %}
+  </table>
+
+  <div class="report_h2">4.2 风险详情</div>
+  {% for c in categories %}
+  <details>
+    <summary>
+      <span class="sev-{{ c.severity|lower }}">[{{ t('severity.' ~ c.severity|lower) }}]</span>
+      {{ c.label }}
+      <span class="meta">影响 {{ c.nodes|length }} 台 · 出现 {{ c.occurrences }} 次</span>
+    </summary>
+    <table class="detail">
+      <tr><th>受影响主机</th><td>{{ c.nodes|join('、') or '—' }}</td></tr>
+      <tr><th>详细描述</th><td>{{ c.description or '—' }}</td></tr>
+      <tr><th>整改建议</th><td>{{ c.remediation or '—' }}</td></tr>
+      <tr><th>ATT&amp;CK</th><td>{{ c.attack_ids|join('、') or '—' }}</td></tr>
+    </table>
+  </details>
+  {% else %}
+  <p class="note">无风险详情。</p>
+  {% endfor %}
+
+  {# ── 5 脆弱配置 ── #}
+  <div class="report_h" id="s5">5.观察到的安全薄弱项</div>
+  {% set weak_cats = ['NO_AUTH_OBSERVED', 'CLEARTEXT_ENG', 'CLEARTEXT_REMOTE_ACCESS', 'MODBUS_WRITE_ANON', 'OPC_NO_SECURITY', 'S7_PROGRAM_ACCESS'] %}
+  {% set weak = categories|selectattr('category', 'in', weak_cats)|list %}
+  {% if weak %}
+  <table>
+    <tr><th>配置风险</th><th>严重度</th><th class="num">影响资产</th><th>说明</th></tr>
+    {% for c in weak %}
+    <tr>
+      <td>{{ c.label }}</td>
+      <td class="sev-{{ c.severity|lower }}">{{ t('severity.' ~ c.severity|lower) }}</td>
+      <td class="num">{{ c.nodes|length }}</td>
+      <td>{{ c.description or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="note">本次评估未发现弱认证 / 明文工程协议 / 匿名写入类脆弱配置。</p>
+  {% endif %}
+
+  {# ── 6 参考标准与安全建议 ── #}
+  <div class="report_h" id="s6">6.参考标准与安全建议</div>
+  <div class="report_h2">6.1 风险等级评定标准</div>
+  <table>
+    <tr><th style="width:14%">等级</th><th>定义</th></tr>
+    <tr><td class="sev-critical">严重</td><td>可直接影响生产控制或导致横向渗透的关键暴露面，需立即处置。</td></tr>
+    <tr><td class="sev-high">高危</td><td>存在明确的攻击可利用路径或异常行为，需在一周内处置。</td></tr>
+    <tr><td class="sev-medium">中危</td><td>偏离安全基线但需结合业务上下文判断，建议 30 天内整改。</td></tr>
+    <tr><td class="sev-low">低危</td><td>信息性风险或加固建议，可纳入例行维护。</td></tr>
+    <tr><td class="sev-info">信息</td><td>仅用于补全资产与协议画像，不构成风险。</td></tr>
+  </table>
+
+  <div class="report_h2">6.2 主机风险等级评定</div>
+  <p class="note">主机风险等级取其关联风险发现的最高等级；无关联发现的主机标记为"无"。</p>
+
+  <div class="report_h2">6.3 安全建议</div>
+  <ol class="toc" style="padding-left:8mm">
+    {% set advice = [] %}
+    {% for c in categories if c.remediation %}
+      <li><strong>{{ c.label }}：</strong>{{ c.remediation }}</li>
+    {% else %}
+    <li>本次评估未产生需整改的风险项，建议保持现有边界策略并定期复评。</li>
+    {% endfor %}
+  </ol>
+
+  {# ── 7 附录 ── #}
+  <div class="report_h" id="s7">7.附录</div>
+  <div class="report_h2">7.1 协议清单</div>
+  <table>
+    <tr><th>序号</th><th>协议 / 服务</th><th class="num">数据包</th><th class="num">出现报告数</th></tr>
+    {% for p in (aggregate.protocols or [])|sort(attribute='packet_count', reverse=true) %}
+      {% if loop.index <= 30 %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td>{{ p.name }}</td>
+        <td class="num">{{ '{:,}'.format(p.packet_count or 0) }}</td>
+        <td class="num">{{ p.report_count or 0 }}</td>
+      </tr>
+      {% endif %}
+    {% else %}
+    <tr><td colspan="4">无协议数据。</td></tr>
+    {% endfor %}
+  </table>
+
+  <div class="report_h2">7.2 Purdue 层级分布</div>
+  <table>
+    <tr><th>层级</th><th class="num">资产数量</th></tr>
+    {% for lv, n in purdue_counts.items()|sort %}
+    <tr><td>L{{ lv }}</td><td class="num">{{ n }}</td></tr>
+    {% else %}
+    <tr><td colspan="2">无数据。</td></tr>
+    {% endfor %}
+  </table>
+
+  <div class="report_h2">7.3 报告说明</div>
+  <p class="note">
+    本报告由 CharmShark 被动流量分析平台生成，数据来源为项目内的 {{ report_count }} 份 PCAP 分析结果。
+    资产与风险为空表示采集窗口内未观察到相关通信，不代表资产不存在。
+    如需核对，可在平台工作台中查看对应报告的证据与原始会话。
+  </p>
+
+</div>
+<script>
+  function toggleAll(open) {
+    document.querySelectorAll('details').forEach(function (d) { d.open = open; });
+  }
+  // 打印前展开全部详情，确保 PDF 完整。
+  window.addEventListener('beforeprint', function () {
+    document.querySelectorAll('details').forEach(function (d) { d.open = true; });
+  });
+</script>
+</body>
+</html>

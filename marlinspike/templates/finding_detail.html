@@ -1,0 +1,169 @@
+﻿{% extends "base.html" %}
+{% block title %}CharmShark — {{ t('fd.title') }}{% endblock %}
+
+{% block head %}
+<style>
+.fd-wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 60px; }
+.fd-crumb { font-size: .82em; color: var(--text-dim, #8fa3bf); margin-bottom: 8px; display: flex; gap: 6px; flex-wrap: wrap; }\n.fd-crumb a { color: var(--text-dim, #8fa3bf); text-decoration: none; }\n.fd-crumb a:hover { color: var(--accent, #7ac1ff); }\n.fd-crumb-now { color: var(--text, #dbe6f5); }\n.fd-back { font-size: .85em; color: var(--text-dim, #8fa3bf); text-decoration: none; }
+.fd-back:hover { color: var(--accent, #7ac1ff); }
+.fd-head { margin: 12px 0 18px; }
+.fd-title { margin: 0 0 4px; font-size: 1.5em; color: var(--text, #dbe6f5); }
+.fd-sub { font-size: .88em; color: var(--text-dim, #8fa3bf); }
+.fd-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.fd-chip { font-size: .78em; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-dim, #2a3a52); color: var(--text-dim, #8fa3bf); }
+.fd-chip b { color: var(--text, #dbe6f5); font-weight: 600; }
+.fd-chip.sev-critical { border-color: #b42318; color: #ff8f85; }
+.fd-chip.sev-high { border-color: #c75b12; color: #ffb27a; }
+.fd-chip.sev-medium { border-color: #a66b00; color: #ffd27a; }
+.fd-card { border: 1px solid var(--border-dim, #2a3a52); border-radius: 10px; background: rgba(15,24,39,.72); padding: 18px 20px; margin-bottom: 16px; }
+.fd-card h2 { margin: 0 0 12px; font-size: 1em; color: var(--text, #dbe6f5); }
+.fd-card.observed { border-left: 3px solid #4c8dff; }
+.fd-card.statistical { border-left: 3px solid #9b7bff; }
+.fd-card.context { border-left: 3px solid #e0a03a; }
+.fd-card.limitation { border-left: 3px solid #b42318; }
+.fd-list { margin: 0; padding-left: 20px; line-height: 1.9; color: var(--text, #dbe6f5); }
+.fd-list li { margin-bottom: 4px; }
+.fd-table { width: 100%; border-collapse: collapse; font-size: .86em; }
+.fd-table th, .fd-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid rgba(42,58,82,.6); }
+.fd-table th { color: var(--text-dim, #8fa3bf); font-weight: 500; }
+.fd-mono { font-family: ui-monospace, Consolas, monospace; font-size: .86em; }
+.fd-copy { margin-left: 8px; padding: 2px 8px; font-size: .78em; cursor: pointer;
+  background: none; border: 1px solid var(--border-dim, #2a3a52); border-radius: 4px; color: var(--text-dim, #8fa3bf); }
+.fd-copy:hover { border-color: var(--accent, #7ac1ff); color: var(--accent, #7ac1ff); }
+.fd-filter { display: block; margin-top: 8px; padding: 9px 10px; border-radius: 6px;
+  background: rgba(0,0,0,.3); border: 1px dashed var(--border-dim, #2a3a52); color: #9ad0ff; }
+.fd-note { font-size: .8em; color: var(--text-dim, #8fa3bf); line-height: 1.7; }
+.fd-related a { display: block; padding: 8px 10px; border-radius: 6px; text-decoration: none;
+  color: var(--text, #dbe6f5); border: 1px solid transparent; }
+.fd-related a:hover { background: rgba(122,193,255,.08); border-color: var(--border-dim, #2a3a52); }
+.fd-related .sev { font-size: .8em; color: var(--text-dim, #8fa3bf); margin-left: 8px; }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set ev = finding.evidence or {} %}
+{% set det = finding.detection or {} %}
+{% set blocks = ev.blocks or [] %}
+<div class="fd-wrap">
+  <div class="fd-crumb">
+    <a href="/home">{{ t('nav.workspace') }}</a>
+    <span>/</span>
+    <a href="/api/reports/{{ filename }}/viewer{% if project_id %}?project_id={{ project_id }}{% endif %}">{{ t('fd.crumb_report') }}</a>
+    <span>/</span>
+    <span class="fd-crumb-now">{{ finding.label_l1 or finding.category_label or finding.category }}</span>
+  </div>
+  <a class="fd-back" href="/api/reports/{{ filename }}/viewer{% if project_id %}?project_id={{ project_id }}{% endif %}">← {{ t('fd.back') }}</a>
+
+  <div class="fd-head">
+    <h1 class="fd-title">{{ finding.label_l1 or finding.category_label or finding.category }}</h1>
+    <div class="fd-sub">
+      {{ finding.category_label or finding.category }}
+      {% if finding.finding_id %} · <span class="fd-mono">{{ finding.finding_id }}</span>{% endif %}
+    </div>
+    <div class="fd-chips">
+      <span class="fd-chip sev-{{ (finding.severity or 'info')|lower }}">{{ t('fd.severity') }}：<b>{{ t('severity.' ~ (finding.severity or 'INFO')|lower) }}</b></span>
+      <span class="fd-chip">{{ t('fd.confidence') }}：<b>{{ ((finding.confidence or 0) * 100)|round(0)|int }}%</b></span>
+      <span class="fd-chip">{{ t('fd.evidence') }}：<b>{% set q = finding.evidence_quality or 'LOW' %}{{ t('fd.quality.' ~ q|lower) }}</b></span>
+      {% if finding.asset_criticality and finding.asset_criticality != 'unknown' %}
+      <span class="fd-chip">{{ t('fd.criticality') }}：<b>{{ t('fd.crit.' ~ finding.asset_criticality) }}</b></span>
+      {% endif %}
+      <span class="fd-chip">{{ t('fd.observation') }}：<b>{% if finding.observation_status == 'OBSERVED' %}{{ t('fd.obs.observed') }}{% else %}{{ t('fd.obs.inferred') }}{% endif %}</b></span>
+    </div>
+  </div>
+
+  {% if finding.affected_nodes %}
+  <div class="fd-card">
+    <h2>{{ t('fd.affected') }}</h2>
+    <div class="fd-mono">{{ finding.affected_nodes|join('、') }}</div>
+  </div>
+  {% endif %}
+
+  {% for b in blocks %}
+  <div class="fd-card {{ b.type|lower }}">
+    <h2>{{ b.title }}</h2>
+    <ul class="fd-list">
+      {% for item in b['items'] %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+
+  {% if not blocks %}
+  <div class="fd-card limitation">
+    <h2>{{ t('fd.no_evidence') }}</h2>
+    <p class="fd-note">{{ t('fd.no_evidence_note') }}</p>
+  </div>
+  {% endif %}
+
+  {% if flows %}
+  <div class="fd-card">
+    <h2>{{ t('fd.flows') }}（{{ flows|length }}）</h2>
+    <table class="fd-table">
+      <tr><th>Flow</th><th>{{ t('fd.src') }}</th><th>{{ t('fd.dst') }}</th><th>{{ t('fd.state') }}</th><th>{{ t('fd.visibility') }}</th><th class="num">{{ t('fd.packets') }}</th></tr>
+      {% for fl in flows %}
+      <tr>
+        <td class="fd-mono">{{ fl.flow_id }}</td>
+        <td class="fd-mono">{{ fl.src_ip }}:{{ fl.src_port }}</td>
+        <td class="fd-mono">{{ fl.dst_ip }}:{{ fl.dst_port }}</td>
+        <td>{{ fl.tcp_state }}</td>
+        <td>{% if fl.visibility == 'FULL_VISIBILITY' %}{{ t('fd.vis.full') }}{% elif fl.visibility == 'PARTIAL_VISIBILITY' %}{{ t('fd.vis.partial') }}{% else %}{{ fl.visibility }}{% endif %}</td>
+        <td class="num">{{ fl.packets }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="fd-card">
+    <h2>{{ t('fd.frames') }}</h2>
+    {% if ev.frame_numbers %}
+      <div class="fd-mono" id="fd-frames">{{ ev.frame_numbers|join(', ') }}</div>
+      <button class="fd-copy" onclick="fdCopy('fd-frames')">{{ t('fd.copy') }}</button>
+      {% if ws_filter %}
+      <div class="fd-note" style="margin-top:12px;">{{ t('fd.wireshark') }}</div>
+      <code class="fd-filter fd-mono" id="fd-filter">{{ ws_filter }}</code>
+      <button class="fd-copy" onclick="fdCopy('fd-filter')">{{ t('fd.copy') }}</button>
+      {% endif %}
+    {% else %}
+      <p class="fd-note">{{ t('fd.no_frames') }}</p>
+    {% endif %}
+  </div>
+
+  <div class="fd-card">
+    <h2>{{ t('fd.capture') }}</h2>
+    {% set cap = ev.capture_ref or {} %}
+    <table class="fd-table">
+      <tr><th>{{ t('fd.capture_file') }}</th><td class="fd-mono">{{ cap.filename or filename }}</td></tr>
+      <tr><th>{{ t('fd.capture_packets') }}</th><td>{{ cap.packets or '—' }}</td></tr>
+      <tr><th>{{ t('fd.capture_window') }}</th><td class="fd-mono">{{ (cap.window or {}).get('start','') }} ~ {{ (cap.window or {}).get('end','') }}</td></tr>
+    </table>
+    <p class="fd-note" style="margin-top:10px;">{{ t('fd.capture_note') }}</p>
+  </div>
+
+  {% if related %}
+  <div class="fd-card fd-related">
+    <h2>{{ t('fd.related') }}（{{ related|length }}）</h2>
+    {% for r in related %}
+    <a href="/api/reports/{{ filename }}/finding/{{ r.finding_id }}{% if project_id %}?project_id={{ project_id }}{% endif %}">
+      {{ r.label_l1 or r.category_label or r.category }}
+      <span class="sev">{{ t('severity.' ~ (r.severity or 'INFO')|lower) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <p class="fd-note">{{ t('fd.footer_note') }}</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fdCopy(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var text = el.textContent || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text.trim());
+  }
+}
+</script>
+{% endblock %}

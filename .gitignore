@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+build/
+
+# Runtime data (never commit captures or reports)
+data/
+reports/
+uploads/
+*.db
+*.sqlite3
+
+# Local environment
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+logs/
+*.log
+
+# Local config / secrets
+config.env
+.env
+
+# Packaging
+dist/
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db

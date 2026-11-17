@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}CharmShark — 项目工作台{% endblock %}
+
+{% block head %}
+<style>
+.home-wrap { max-width: 1080px; margin: 0 auto; padding: 26px 20px 60px; }
+.home-hero {
+  padding: 30px 30px 26px; margin-bottom: 20px; border-radius: 12px;
+  background: radial-gradient(circle at top right, rgba(122,193,255,.16), transparent 38%),
+              linear-gradient(180deg, rgba(22,34,54,.95), rgba(14,21,34,.95));
+  border: 1px solid var(--border-dim, #2a3a52);
+}
+.home-hero h1 { margin: 0 0 10px; font-size: 1.7em; color: var(--text, #dbe6f5); }
+.home-hero p { margin: 0 0 20px; max-width: 720px; line-height: 1.8; color: var(--text-dim, #8fa3bf); }
+.home-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.home-btn {
+  display: inline-block; padding: 10px 18px; border-radius: 6px; text-decoration: none;
+  border: 1px solid var(--border-dim, #2a3a52); color: var(--text, #dbe6f5); font-size: .92em;
+}
+.home-btn.primary { background: #2f6fd0; border-color: #2f6fd0; color: #fff; font-weight: 600; }
+.home-btn:hover { border-color: #7ac1ff; }
+.home-card {
+  padding: 20px 22px; border-radius: 10px; border: 1px solid var(--border-dim, #2a3a52);
+  background: rgba(15,24,39,.75); margin-bottom: 18px;
+}
+.home-card h2 { margin: 0 0 14px; font-size: 1.02em; color: var(--text, #dbe6f5); }
+.home-recent { display: flex; flex-direction: column; gap: 6px; }
+.home-recent-item {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 11px 12px; border-radius: 6px; text-decoration: none;
+  border: 1px solid transparent; color: var(--text, #dbe6f5);
+}
+.home-recent-item:hover { background: rgba(122,193,255,.08); border-color: var(--border-dim, #2a3a52); }
+.home-recent-name { font-weight: 600; }
+.home-recent-meta { font-size: .8em; color: var(--text-dim, #8fa3bf); white-space: nowrap; }
+.home-empty { color: var(--text-dim, #8fa3bf); font-size: .88em; }
+.home-steps { margin: 0; padding-left: 20px; line-height: 1.9; }
+.home-steps li { margin-bottom: 12px; }
+.home-steps strong { display: block; color: var(--text, #dbe6f5); }
+.home-steps span { font-size: .84em; color: var(--text-dim, #8fa3bf); }
+.home-note {
+  margin-top: 18px; padding: 12px 16px; border-radius: 8px;
+  border: 1px solid rgba(122,193,255,.25); background: rgba(122,193,255,.06);
+  font-size: .84em; color: var(--text-dim, #8fa3bf);
+}
+.run-item { display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 11px 12px; border-radius: 6px; border: 1px solid transparent; }
+.run-item:hover { background: rgba(122,193,255,.06); }
+.run-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.run-title { font-weight: 600; color: var(--text, #dbe6f5); }
+.run-meta { font-size: .8em; color: var(--text-dim, #8fa3bf); overflow: hidden; text-overflow: ellipsis; }
+.run-status { font-size: .76em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border-dim, #2a3a52); white-space: nowrap; }
+.run-status.running { border-color: #4c8dff; color: #9ad0ff; }
+.run-status.failed { border-color: #b42318; color: #ff8f85; }
+.run-link { font-size: .82em; color: #7ac1ff; text-decoration: none; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="home-wrap">
+  <section class="home-hero">
+    <h1>项目工作台</h1>
+    <p>
+      上传交换机镜像口的抓包文件，自动发现工控网络资产、通信关系与潜在安全风险。
+      全程不向目标网络发送任何数据包——不扫描、不探测、不影响生产。
+    </p>
+    <div class="home-actions">
+      <a class="home-btn primary" href="/projects">新建评估并上传抓包</a>
+      <a class="home-btn" href="/projects">查看已有项目</a>
+    </div>
+  </section>
+
+  <section class="home-card" id="home-runs" style="display:none;">
+    <h2>进行中的评估</h2>
+    <div id="home-runs-body"></div>
+  </section>
+
+  <section class="home-card">
+    <h2>项目列表</h2>
+    <div id="home-recent" class="home-recent">加载中…</div>
+  </section>
+
+  <section class="home-card">
+    <h2>快速上手</h2>
+    <ol class="home-steps">
+      <li><strong>上传抓包</strong><span>支持 PCAP / PCAPNG，来自交换机镜像口</span></li>
+      <li><strong>等待自动分析</strong><span>识别资产、协议、拓扑与风险</span></li>
+      <li><strong>查看结果并生成报告</strong><span>支持 PDF 评估报告与资产/发现清单</span></li>
+    </ol>
+  </section>
+
+  <div class="home-note">
+    提示：被动分析只覆盖采集窗口内可见的通信；"未观察到"不等于"不存在"。
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  async function loadProjects() {
+    var box = document.getElementById('home-recent');
+    try {
+      var res = await fetch('/api/projects', { headers: { 'Accept': 'application/json' } });
+      var data = await res.json();
+      var items = (data.projects || []).slice(0, 8);
+      if (!items.length) {
+        box.innerHTML = '<p class="home-empty">还没有项目，点击上方"新建评估"开始。</p>';
+        return;
+      }
+      box.innerHTML = items.map(function (p) {
+        var when = p.last_assessment ? String(p.last_assessment).slice(0, 10) : '尚未评估';
+        var risk = p.high_count ? ('高危 ' + p.high_count) : (p.risk_count ? ('风险 ' + p.risk_count) : '无风险');
+        return '<a class="home-recent-item" href="/projects#project-' + p.id + '">'
+          + '<span class="home-recent-name">' + esc(p.name || ('项目 ' + p.id)) + '</span>'
+          + '<span class="home-recent-meta">最近评估 ' + esc(when) + ' · ' + esc(risk)
+          + ' · 资产 ' + (p.asset_count || 0) + ' · ' + (p.report_count || 0) + ' 份报告</span></a>';
+      }).join('');
+    } catch (e) {
+      box.innerHTML = '<p class="home-empty">加载失败，请刷新重试。</p>';
+    }
+  }
+
+  async function loadRuns() {
+    var section = document.getElementById('home-runs');
+    var body = document.getElementById('home-runs-body');
+    try {
+      var res = await fetch('/api/history?limit=20', { headers: { 'Accept': 'application/json' } });
+      var data = await res.json();
+      var active = (data.scans || []).filter(function (s) {
+        return s.status === 'running' || s.status === 'pending' || s.status === 'failed';
+      }).slice(0, 5);
+      if (!active.length) return;
+      section.style.display = '';
+      body.innerHTML = active.map(function (s) {
+        var label = s.status === 'running' ? '分析中'
+          : s.status === 'pending' ? '等待中' : '失败';
+        var cls = s.status === 'failed' ? 'failed' : 'running';
+        var target = '/api/runs/' + encodeURIComponent(s.run_id) + '/live';
+        return '<div class="run-item">'
+          + '<div class="run-main">'
+          + '<span class="run-title">' + esc(s.project_name || s.pcap_source || s.run_id) + '</span>'
+          + '<span class="run-meta">' + (s.error_tail ? esc(String(s.error_tail).slice(-120)) : esc(s.started_at || '')) + '</span>'
+          + '</div>'
+          + '<span class="run-status ' + cls + '">' + label + '</span>'
+          + '<a class="run-link" href="' + target + '">查看进度</a>'
+          + '</div>';
+      }).join('');
+    } catch (e) { /* silent */ }
+  }
+
+  loadProjects();
+  loadRuns();
+})();
+</script>
+{% endblock %}
